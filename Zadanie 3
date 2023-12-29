@@ -1,0 +1,271 @@
+Степанов Никита 
+Иф-01
+Практика 3
+1. SELECT product_name, suppliers.company_name, units_in_stock
+FROM products
+INNER JOIN suppliers ON products.supplier_id = suppliers.supplier_id
+ORDER BY units_in_stock DESC;
+
+SELECT category_name, SUM(units_in_stock)
+FROM products
+INNER JOIN categories ON products.category_id = categories.category_id
+GROUP BY category_name
+ORDER BY SUM(units_in_stock) DESC
+LIMIT 5;
+
+SELECT category_name, SUM(unit_price * units_in_stock)
+FROM products
+INNER JOIN categories ON products.category_id = categories.category_id
+WHERE discontinued <> 1
+GROUP BY category_name
+HAVING SUM(unit_price * units_in_stock) > 5000
+ORDER BY SUM(unit_price * units_in_stock) DESC;
+
+SELECT order_id, customer_id, first_name, last_name, title
+FROM orders
+INNER JOIN employees ON orders.employee_id = employees.employee_id;
+
+SELECT order_date, product_name, ship_country, unit_price, quantity, discount
+FROM orders
+INNER JOIN order_details ON orders.order_id = order_details.order_id
+INNER JOIN products ON order_details.product_id = products.product_id;
+
+SELECT contact_name, company_name, phone, first_name, last_name, title,
+	order_date, product_name, ship_country, products.unit_price, quantity, discount
+FROM orders
+JOIN order_details ON orders.order_id = order_details.order_id
+JOIN products ON order_details.product_id = products.product_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN employees ON orders.employee_id = employees.employee_id
+WHERE ship_country = 'USA';
+
+2. SELECT company_name, product_name
+FROM suppliers
+LEFT JOIN products ON suppliers.supplier_id = products.supplier_id;
+
+SELECT company_name, order_id
+FROM customers
+LEFT JOIN orders ON orders.customer_id = customers.customer_id
+WHERE order_id IS NULL;
+
+SELECT last_name, order_id
+FROM employees
+LEFT JOIN orders ON orders.employee_id = employees.employee_id
+WHERE order_id IS NULL;
+
+SELECT company_name, order_id
+FROM orders
+RIGHT JOIN customers ON orders.customer_id = customers.customer_id
+WHERE order_id IS NULL;
+
+3. CREATE TABLE employee (
+	employee_id int PRIMARY KEY,
+	first_name varchar(256) NOT NULL,
+	last_name varchar(256) NOT NULL,
+	manager_id int,
+	FOREIGN KEY (manager_id) REFERENCES employee(employee_id);
+);
+
+INSERT INTO employee
+(employee_id, first_name, last_name, manager_id)
+VALUES 
+(1, 'Windy', 'Hays', NULL),
+(2, 'Ava', 'Christensen', 1),
+(3, 'Hassan', 'Conner', 1),
+(4, 'Anna', 'Reeves', 2),
+(5, 'Sau', 'Norman', 2),
+(6, 'Kelsie', 'Hays', 3),
+(7, 'Tory', 'Goff', 3),
+(8, 'Salley', 'Lester', 3);
+
+SELECT e.first_name || ' ' || e.last_name AS employee,
+	   m.first_name || ' ' || m.last_name AS manager
+FROM employee e
+LEFT JOIN employee m ON m.employee_id = e.manager_id
+ORDER BY manager;
+4. SELECT contact_name, company_name, phone, first_name, last_name, title,
+	order_date, product_name, ship_country, products.unit_price, quantity, discount
+FROM orders
+JOIN order_details ON orders.order_id = order_details.order_id
+JOIN products ON order_details.product_id = products.product_id
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN employees ON orders.employee_id = employees.employee_id
+WHERE ship_country = 'USA';
+
+SELECT contact_name, company_name, phone, first_name, last_name, title,
+	order_date, product_name, ship_country, products.unit_price, quantity, discount
+FROM orders
+JOIN order_details USING(order_id)
+JOIN products ON USING(product_id)
+JOIN customers ON USING(customer_id)
+JOIN employees ON USING(employee_id)
+WHERE ship_country = 'USA';
+
+SELECT order_id, customer_id, first_name, last_name, title
+FROM orders
+NATURAL JOIN employees;
+
+
+5. SELECT COUNT(*) AS employees_count
+FROM employees;
+
+SELECT COUNT(DISTINCT country) AS country
+FROM employees;
+
+SELECT category_id, SUM(units_in_stock) AS units_in_stock
+FROM products
+GROUP BY category_id
+ORDER BY units_in_stock DESC
+LIMIT 5;
+
+SELECT category_id, SUM(unit_price * units_in_stock) AS total_price
+FROM products
+WHERE discontinued <> 1
+GROUP BY category_id
+HAVING SUM(unit_price * units_in_stock) > 5000
+ORDER BY total_price DESC;
+
+
+
+
+
+
+
+
+
+
+План конспекта:
+    • Введение в SQL джойны
+    • Внутреннее соединение (джойн) - INNER JOIN
+    • Внешние соединения (джойны) - LEFT, RIGHT JOIN
+    • Рекурсивное соедиенение (джойн) - SELF JOIN
+    • USING & NATURAL JOIN
+    • Псевдонимы с помощью AS
+
+    • 1. Введение в SQL джойны
+SQL Join – одна из наиболее часто используемых команд в SQL-синтаксисе. Она используется для поиска информации в базах данных по заранее определенным критериям. В частности, Join отвечает за объединение нескольких групп данных в единый поток информации.
+И это действительно необходимо, потому что в 100% случаев контент в реляционных базах данных с поддержкой SQL-синтаксиса делится на множество таблиц, фильтровать данные в которых можно с помощью специальных команд и запросом информации из общего пула таблиц. 
+SQL Join помогает настроить фильтр поиска в базе данных, опираясь на взаимосвязи между различными элементами БД и их отличительные черты (теги, ID, наименования и т.п.).
+
+2. Внутреннее соединение (джойн) - INNER JOIN 
+Этот режим объединения результатов поиска в базах данных SQL включается автоматически. Если вы не укажете намеренно тип Join, то сработает именно Inner Join. С помощью него можно указать сразу два критерия (две таблицы) и по ним отсеять контент. 
+Достаточно прописать SQL-запрос в духе:
+SELECT *
+FROM table-1
+JOIN table-2 ON table-1.parameter=table-2.parameter
+WHERE table-1.parameter IS ‘myData’
+Фактически мы пытаемся выудить данные из первой таблицы и объединить их с данными из второй таблицы, при этом фильтруя только те записи, в которых совпадает значение параметра. В первой таблице оно приравнивается к myData.
+На практике это может использоваться на сайте с музыкальными инструментами, например. Можно запрашивать гитары конкретного бренда, при этом еще и выбирая дополнительное условие в духе количества струн.
+SELECT *
+FROM SevenStringGuitars
+JOIN Ibanez ON SevenStringGuitar.brandId=Ibanez.brandId
+Таким SQL-запросом мы можем отфильтровать все инструменты бренда Ibanez в категории «Гитары» с 7 струнами. 
+
+3. Внешние соединения (джойны) - LEFT, RIGHT JOIN
+Outer Join – это своего рода противоположность Inner Join. Как понятно из названия, Outer Join предоставляет информацию не только из внутренней части поиска, но и из внешней. То есть программа ищет не только точечные совпадения по выбранным ранее критериям, а позволяет немного ослабить «хватку» и предоставить более «свободные» результаты поиска, включающие в себя элементы из таблиц, которые хоть и совпадают с критериями в SQL-запросе, но не полностью. 
+Когда такой подход может понадобиться? Например, для скрупулезной фильтрации товаров. Если вы готовы покупать продукцию компании «Шестерочка» и не против, если среди нее окажется молоко, но при этом вы точно не хотите покупать молоко других производителей, то вам подойдет подобный фильтр. Он позволяет дать одному из критериев поиска что-то в духе привилегий. 
+Разновидности Outer Join
+Внешние Join-запросы существуют не в единственном виде, а сразу в трех вариациях. Каждый вариант по-своему обрабатывает информацию и в итоге выдает разные результаты. 
+Left
+Левое объединение подразумевает как раз выше описанный сценарий. Когда мы берем одну таблицу, подключаем вторую и при этом показываем не только точные совпадения, но еще и весь список строк, полученных из левой таблицы, для которых не нашлось пары в правой таблице.
+На практике это может выглядеть так:
+SELECT *
+FROM table1
+LEFT JOIN table2 ON table1.parameter=table2.parameter
+Теперь мы объединяем первую и вторую таблицу, доставая информацию как о совпадениях по заданным параметрам, так и по контенту без пары в левой таблице. 
+При желании, надстраивая подобный фильтр, можно вовсе исключить целую категорию строк:
+SELECT * 
+FROM table1
+LEFT JOIN table2 ON table1.parameter=table2.parameter
+WHERE table2.parameter IS NULL
+На живом примере фильтрация такого рода может выглядеть так:
+SELECT *
+FROM Russian
+LEFT JOIN Rap ON Russian.genreId=Rap.genreId
+Представим, что мы запустили продвинутый поиск на сайте с музыкальными альбомами. Мы хотим послушать что-то на русском языке. Причем готовы даже оценить качество отечественного рэпа. При этом в целом мы рэп не любим и не хотим, чтобы он попадался на каких-то других языках.
+Right
+Понятно, что правое объединение будет работать в обратную сторону и покажет элементы из правой таблицы, для которых не нашлось пары в левой. 
+Получится следующий SQL-запрос:
+SELECT *
+FROM table1
+RIGHT JOIN table2 ON table1.parameter=table2.parameter
+Если взять пример из предыдущей главы, то в реальности можно обернуть ситуацию в противоположную сторону. Искать только рэп-музыку, исключив все русское, кроме хип-хопа. Получится что-то в духе:
+SELECT *
+FROM Russian
+RIGHT JOIN Rap ON Russian.genreId=Rap.genreId
+Full
+Это вариант для тех, кто хочет использовать сразу два разных критерия для поиска какого-либо контента. Снова вернемся к примеру с музыкальным приложением. Join Full может пригодиться, если вы хотите послушать либо что-то на русском, либо любой рэп. Вам не важны какие-либо другие параметры. Вас волнуют исключительно две характеристики. При этом вам не так важно, будут ли они пересекаться. То есть вам все равно, будет рэп на русском или же на русском будет какой-то агрессивный металл. 
+
+4. Рекурсивное соедиенение (джойн) - SELF JOIN
+SQL Self Join 
+Запросы Self Join полезны в тех случаях, когда необходимо выполнить фильтрацию контента внутри одной таблицы. Например, у вас есть список товаров в базе данных. У каждого из них указан свой бренд, но есть и те, что поставляются одним производителем. Self Join можно использовать для объединения двух стеков информации из одной таблицы. 
+Например, можно запросить информацию о наименовании товара и параллельно обратиться к базе с названием бренда. Результатом работы функции станет появление нового списка товаров, соответствующего критериям.
+SQL-команда в этом случае может выглядеть следующим образом:
+SELECT *
+FROM products JOIN products ON table.product=table.brand
+Такой сценарий полезен практически в любом виде баз данных, так как в одной таблице нередко может храниться информация о товарах или контенте, имеющим большое количество общих параметров. 
+
+
+
+
+
+5. USING & NATURAL JOIN
+
+Естественное соединение SQL
+
+В этой статье представлен обзор естественного соединения в SQL, а также некоторые базовые примеры.
+Что такое естественное соединение?
+Естественное соединение SQL - это тип равносоединения, который неявно объединяет таблицы на основе столбцов с одинаковым именем и типом. Предикат соединения возникает неявно путем сравнения всех столбцов в обеих таблицах, которые имеют одинаковые имена столбцов в соединенных таблицах.
+Результирующий набор содержит только один столбец для каждой пары столбцов с одинаковыми именами. Если нет столбцов с одинаковыми именами не найдено, то результат будет перекрестное соединение.
+Синтаксис
+Естественное соединение может быть применено к любому INNER, LEFT, RIGHT, или FULL Присоединиться. Вы просто добавляете в префикс к типу соединения ключевое слово NATURAL .
+Пример синтаксиса, используемого во внутреннем соединении:
+SELECT *
+FROM Table1 NATURAL INNER JOIN Table2 
+ON Table1.Column = Table2.Column;
+Поскольку INNER является значением по умолчанию, вы также можете сделать это следующим образом:
+SELECT *
+FROM Table1 NATURAL JOIN Table2 
+ON Table1.Column = Table2.Column;
+Ключевое слово NATURAL помещает неявное USING предложение в ограничения соединения. Оно формирует USING список, состоящий из всех имен столбцов, которые появляются в обеих входных таблицах. Очевидно, что это применимо только к СУБД, которые поддерживают предложение USING.
+Не все СУБД поддерживают естественные соединения, поэтому ознакомьтесь с документацией вашей СУБД.
+На момент написания этих строк естественные соединения поддерживаются в PostgreSQL, MySQL, MariaDB, SQLite и Oracle. Однако естественные соединения не поддерживаются в SQL Server (2019).
+
+6. Псевдонимы с помощью AS
+В SQL, ключевое слово AS используется для создания псевдонимов для таблиц и столбцов в запросах. Оно позволяет назначить удобные имена для этих объектов, которые могут быть более читаемыми и понятными.
+Например, чтобы создать псевдоним для таблицы "Customers", мы можем использовать следующий синтаксис:
+SELECT * FROM Customers AS c
+COPY
+В этом запросе, "AS c" позволяет нам сделать ссылку на таблицу "Customers" с помощью краткого имени "c". Теперь мы можем обращаться к столбцам этой таблицы используя псевдоним:
+SELECT c.CustomerName, c.City FROM Customers AS c
+COPY
+Таким образом, ключевое слово AS помогает нам сделать наши запросы более понятными и удобными в чтении.
+Детальный ответ
+Что означает "AS" в SQL?
+SQL (Structured Query Language) является языком программирования, который используется для работы с реляционными базами данных. Один из важных операторов в SQL - это оператор SELECT, который позволяет выбирать данные из таблицы. В операторе SELECT мы можем указывать столбцы, которые хотим выбрать, с помощью ключевого слова "AS". Давайте рассмотрим, что означает "AS" и как он используется в SQL.
+
+	1. Переименование столбцов
+Одним из основных назначений ключевого слова "AS" является переименование столбцов в результирующем наборе данных. Когда вы выполняете SELECT-запрос, у вас может быть необходимость выбрать столбцы с другими именами. Например, пусть у нас есть таблица "users" со столбцами "id", "name" и "age". Если мы хотим выбрать только столбец "name" и назвать его "Full Name" в результирующем наборе данных, мы можем использовать ключевое слово "AS". Давайте посмотрим на пример:
+SELECT name AS "Full Name" FROM users;
+COPY
+В этом запросе мы выбираем столбец "name" из таблицы "users" и переименовываем его в "Full Name" с помощью ключевого слова "AS". Результирующий набор данных будет содержать только столбец "Full Name".
+	2. Переименование таблиц
+Кроме переименования столбцов, ключевое слово "AS" также может быть использовано для переименования таблиц в SQL. Когда вы выполняете JOIN запросы или подзапросы, иногда может возникнуть потребность в изменении имени таблицы для удобства чтения и понимания запроса. Давайте рассмотрим пример:
+SELECT u.name, p.product_name FROM users AS u JOIN products AS p ON u.id = p.user_id;
+COPY
+В этом запросе мы выполняем JOIN между таблицами "users" и "products". Мы переименовываем таблицу "users" в "u" с помощью ключевого слова "AS". Теперь мы можем обращаться к столбцам таблицы "users" через псевдоним "u". Также мы используем переименование столбца "product_name" из таблицы "products".
+	3. Переименование выражений и функций
+Ключевое слово "AS" может также использоваться для переименования выражений и функций в SQL. В результате выполнения запроса результаты выражений или функций могут иметь разные имена для удобства использования и понимания. Посмотрим на пример:
+SELECT COUNT(*) AS "Total Users" FROM users;
+COPY
+В этом примере мы используем функцию COUNT(*) для подсчета общего количества записей в таблице "users". Мы переименовываем результат этой функции в "Total Users" с помощью ключевого слова "AS". Теперь результат функции будет иметь имя "Total Users".
+	4. Переименование значений условий
+Ключевое слово "AS" также может быть использовано для переименования значений условий в операторе WHERE в SQL. Например, если мы хотим выбрать только ряды, у которых возраст больше 18 лет, мы можем использовать "AS" для переименования значения этого условия. Рассмотрим пример:
+SELECT * FROM users WHERE age > 18 AS "Adult Users";
+COPY
+В этом запросе мы выбираем все ряды из таблицы "users", где значение столбца "age" больше 18. Мы переименовываем строки, удовлетворяющие этому условию, в "Adult Users" с помощью ключевого слова "AS".
+Заключение
+Ключевое слово "AS" в SQL используется для переименования столбцов, таблиц, выражений и значений условий. Оно помогает сделать запросы более понятными и удобными для использования. Помимо этого, "AS" также используется для объединения таблиц и подзапросов при выполнении JOIN запросов. Отлично! Теперь вы знаете, что означает "AS" в SQL и как его использовать.
+
+
+
