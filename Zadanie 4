@@ -1,0 +1,316 @@
+Степанов Никита
+Иф-01
+Практика 4
+Введение в подзапросы.sql
+что если мы хотим найти все компании поставщиков из тех стран, в которые делают заказы заказчики?
+SELECT company_name
+FROM suppliers
+WHERE country IN (SELECT country FROM customers)
+ 
+--equivalent query
+SELECT DISTINCT suppliers.company_name
+FROM suppliers
+JOIN customers USING(country)
+ 
+SELECT category_name, SUM(units_in_stock)
+FROM products
+INNER JOIN categories ON products.category_id = categories.category_id
+GROUP BY category_name
+ORDER BY SUM(units_in_stock) DESC
+LIMIT (SELECT MIN(product_id) + 4 FROM products)
+ 
+среднее кол-во товаров в наличии
+SELECT AVG(units_in_stock)
+FROM products
+ 
+а если мы хотим вывести такие товары, количество которого в наличии больше чем в среднем
+SELECT product_name, units_in_stock
+FROM products
+WHERE units_in_stock >
+(SELECT AVG(units_in_stock)
+FROM products)
+ORDER BY units_in_stock
+WHERE EXISTS.sql
+выбрать компании и имена заказчиков, которые делали заказы весом от 50 до 100
+SELECT company_name, contact_name
+FROM customers
+WHERE EXISTS (SELECT customer_id FROM orders
+              WHERE customer_id=customers.customer_id AND
+              freight BETWEEN 50 AND 100);
+   
+ 
+выбрать компании и имена заказчиков, которые делали заказы между 1-м февраля 95года и 15-м февраля того же года
+SELECT company_name, contact_name
+FROM customers
+WHERE EXISTS (SELECT customer_id FROM orders
+              WHERE customer_id=customers.customer_id AND
+               orderdate BETWEEN '1995-02-01' AND '1995-02-15');
+   
+которые НЕ делали такие заказы
+SELECT companyname,contactname
+FROM customers
+WHERE NOT EXISTS (SELECT customer_id FROM orders
+               WHERE customerid=customers.customerid AND
+                orderdate BETWEEN '1995-02-01' AND '1995-02-15');
+ 
+ 
+выбрать продукты которые не покупались в период с 1-го февраля 95года и 15-м февраля того же года
+SELECT productname
+FROM products
+WHERE NOT EXISTS (SELECT orders.orderid FROM orders
+                  JOIN order_details USING(orderid)
+              	  WHERE order_details.productid=products.productid AND
+                  orderdate BETWEEN '1995-02-01' AND '1995-02-15');
+Подзапросы с квантификаторами ANY, ALL.sql
+выбрать все уникальные компании заказчиков которые делали заказы на более чем 40 единиц товаров
+с джойнами
+SELECT DISTINCT company_name
+FROM customers
+JOIN orders USING(customer_id)
+JOIN order_details USING(order_id)
+WHERE quantity > 40;
+ 
+с подзапросом
+SELECT DISTINCT company_name --from course
+FROM customers
+WHERE customer_id = ANY(SELECT customer_id FROM orders
+   JOIN order_details USING(order_id)
+   WHERE quantity > 40);
+ 
+можно комбинировать джойны с подзапросами
+это у нас просто среднее количество единиц товара по всем заказам
+SELECT AVG(quantity)
+FROM order_details;
+   
+давайте выберем такие продукты, количество которых больше среднего по заказам
+используя предыдущий запрос в качестве подзапроса можно написать следующий запрос:
+SELECT DISTINCT product_name, quantity
+FROM products
+JOIN order_details USING(product_id)
+WHERE quantity >
+  (SELECT AVG(quantity)
+   FROM order_details);
+   
+   
+найти все продукты количество которых больше среднего значения количества заказанных товаров из групп, полученных группированием по product_id
+SELECT AVG(quantity)
+FROM order_details
+GROUP BY product_id;
+ 
+SELECT DISTINCT product_name, quantity
+FROM products
+JOIN order_details USING(product_id)
+WHERE quantity > ALL
+  (SELECT AVG(quantity)
+   FROM order_details
+   GROUP BY product_id)
+ORDER BY quantity;
+
+Подзапросы-Решение.sq
+SELECT product_name, units_in_stock
+FROM products
+WHERE units_in_stock < ALL
+  (SELECT AVG(quantity)
+   FROM order_details
+   GROUP BY product_id)
+ORDER BY units_in_stock DESC;
+ 
+SELECT AVG(quantity)
+FROM order_details
+GROUP BY product_id
+order by AVG(quantity)
+   
+SELECT o.customer_id, SUM(o.freight) AS freight_sum 
+  FROM orders AS o
+       INNER JOIN (SELECT customer_id, AVG(freight) AS freight_avg
+                     FROM orders
+                    GROUP BY customer_id) AS oa
+       ON oa.customer_id = o.customer_id
+WHERE o.freight > oa.freight_avg
+   AND o.shipped_date BETWEEN '1996-07-16' AND '1996-07-31'
+GROUP BY o.customer_id
+ORDER BY freight_sum;
+ 
+SELECT customer_id, ship_country, order_price
+  FROM orders
+       JOIN (SELECT order_id,
+                          SUM(unit_price * quantity - unit_price * quantity * discount) AS order_price
+                     FROM order_details
+                    GROUP BY order_id) od
+       USING(order_id)
+WHERE ship_country IN ('Argentina' , 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador', 'Guyana', 'Paraguay', 
+'Peru', 'Suriname', 'Uruguay', 'Venezuela')
+   AND order_date >= '1997-09-01'
+ORDER BY order_price DESC
+LIMIT 3;
+ 
+SELECT product_name
+FROM products
+WHERE product_id = ANY (SELECT product_id FROM order_details WHERE quantity = 10);
+ 
+SELECT distinct product_name, quantity
+FROM products
+join order_details using(product_id)
+where order_details.quantity = 10
+
+План конспекта:
+    • Введение в SQL подзапросы
+    • WHERE EXISTS
+    • Подзапросы с квантификаторами ANY, ALL
+
+1.Введение в SQL подзапросы
+Подзапрос представляет собой оператор SELECT, вложенный в тело другого оператора.
+Кодирование подзапроса подчиняется тем же правилам, что и кодирование простого оператора SELECT. Внешний оператор использует результат выполнения внутреннего оператора для определения окончательного результата.
+По количеству возвращаемых значений подзапросы разделяются на два типа:
+    • скалярные подзапросы, которые возвращают единственное значение;
+    • табличные подзапросы, которые возвращают множество значений.
+По способу выполнения выделяют два типа подзапросов:
+    • простые подзапросы;
+    • сложные подзапросы.
+Подзапрос называется простым, если он может рассматриваться независимо от внешнего запроса. СУБД выполняет такой подзапрос один раз и затем помещает его результат во внешний запрос.
+Сложный подзапрос не может рассматриваться независимо от внешнего запроса. В этом случае выполнение оператора начинается с внешнего запроса, который отбирает каждую отдельную строку таблицы. Для каждой выбранной строки СУБД выполняет подзапрос один раз.
+Подзапросы в SQL используются для выполнения одного запроса внутри другого запроса. Они позволяют выполнять более сложные и комплексные запросы, а также делать выборку данных на основе результатов других запросов.
+Подзапросы могут быть вложенными в другие подзапросы, а также использоваться внутри выражений WHERE, HAVING и SELECT. Они могут возвращать как один столбец, так и несколько столбцов из одной или нескольких таблиц.
+Синтаксис подзапроса:
+SELECT column_name(s)
+FROM table_name
+WHERE column_name operator_expression;
+
+В подзапросе оператор_выражение обычно является другим запросом, который выполняется первым.
+Пример использования подзапросов:
+SELECT *
+FROM products
+WHERE price > (SELECT AVG(price) FROM products);
+
+Этот запрос выбирает все продукты, цена которых больше, чем среднее значение цены всех продуктов.
+Важно помнить, что подзапросы могут замедлить выполнение запроса из-за необходимости выполнения вложенного запроса перед основным запросом. Поэтому их следует использовать с осторожностью и только в случае необходимости.
+2.WHERE EXISTS
+SQL условие EXISTS используется в сочетании с подзапросом и считается выполненным, если подзапрос возвращает хотя бы одну строку. Его можно использовать в операторе SELECT, INSERT, UPDATE или DELETE.
+Синтаксис
+Синтаксис условия EXISTS в SQL:
+WHERE EXISTS ( subquery );
+Параметры или аргументы
+subquery
+подзапрос является оператором SELECT. Если subquery возвращает хотя бы одну запись в своем наборе результатов, предложение EXISTS оценивается как true и условие EXISTS будет выполнено. Если subquery не возвращает никаких записей, предложение EXISTS оценивается как false, и условие EXISTS не будет выполнено.
+Примечание
+Операторы SQL, использующие условие EXISTS, очень неэффективны, поскольку подзапрос повторно запускается для КАЖДОЙ строки в таблице внешнего запроса. Есть более эффективные способы написания большинства запросов, которые не используют условие EXISTS.
+Пример - использование условия EXISTS с оператором SELECT
+Давайте начнем с примера, который показывает, как использовать условие EXISTS с оператором SELECT.
+В этом примере у нас есть таблица customers со следующими данными:
+customer_id
+first_name
+last_name
+favorite_website
+4000
+Justin
+Bieber
+google.com
+5000
+Selena
+Gomez
+bing.com
+6000
+ Mila
+Kunis
+yahoo.com
+7000
+Tom
+Cruise
+oracle.com
+8000
+Johnny
+Depp
+NULL
+9000
+Russell
+Crowe
+google.com
+И таблица orders со следующими данными:
+order_id
+customer_id
+order_date
+1
+7000
+2019/06/18
+2
+5000
+2019/06/18
+3
+8000
+2019/06/19
+4
+4000
+2019/06/20
+5
+NULL
+2019/07/01
+Теперь давайте найдем все записи из таблицы customers, где есть хотя бы одна запись в таблице orders с тем же customer_id. Выполните следующий SELECT запрос:
+
+1
+2
+3
+4
+5
+6
+SELECT *
+  FROM customers
+WHERE EXISTS 
+  (SELECT *
+     FROM orders
+    WHERE customers.customer_id = orders.customer_id);
+Будет выбрано 4 записи. Вот результаты, которые вы должны получить:
+customer_id
+first_name
+last_name
+favorite_website
+4000
+Justin
+Bieber
+google.com
+5000
+Selena
+Gomez
+bing.com
+7000
+Tom
+Cruise
+oracle.com
+8000
+Johnny
+Depp
+NULL
+В этом примере в таблице customers есть 4 записи, у которых значение customer_id имеется в таблице orders.
+
+3.Подзапросы с квантификаторами ANY, ALL
+Подзапросы с квантификаторами ANY и ALL означают, что в результате выполнения запроса должны быть получены все элементы списка или любой элемент списка соответственно.
+Операторы ANY и ALL используются с предложением WHERE или HAVING. Оператор ANY возвращает true, если какое-либо из значений подзапроса соответствует условию. Оператор ALL возвращает true, если все значения подзапроса удовлетворяют условию.
+Синтаксис ANY
+SELECT column_name(s)
+FROM table_name
+WHERE column_name operator ANY
+(SELECT column_name FROM table_name WHERE condition);
+Синтаксис ALL
+SELECT column_name(s)
+FROM table_name
+WHERE column_name operator ALL
+(SELECT column_name FROM table_name WHERE condition);
+Пример ANY
+Оператор ANY возвращает TRUE, если какое-либо из значений подзапроса соответствует условию. Следующий оператор SQL возвращает TRUE и перечисляет имена товаров, если он находит ЛЮБЫЕ записи в таблице info, с количеством = 15:
+Пример:
+SELECT name
+FROM product
+WHERE product_id = ANY (SELECT product_id FROM info WHERE counts = 15);
+Следующий оператор SQL возвращает TRUE и перечисляет имена товаров, если он находит ЛЮБЫЕ записи в таблице info, с количеством > 15:
+Пример:
+SELECT name
+FROM product
+WHERE product_id = ANY (SELECT product_id FROM info WHERE counts > 15);
+Пример ALL
+Оператор ALL возвращает TRUE, если все значения подзапроса удовлетворяют условию.
+Следующий оператор SQL возвращает TRUE и перечисляет имена товаров, если ВСЕ записи в таблице info имеют количество = 7:
+
+Пример:
+SELECT name
+FROM product
+WHERE product_id = ALL (SELECT product_id FROM info WHERE couns =7);
+
